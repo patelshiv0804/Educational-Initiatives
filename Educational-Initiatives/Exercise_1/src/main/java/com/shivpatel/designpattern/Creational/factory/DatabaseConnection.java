@@ -1,4 +1,4 @@
-package com.shivpatel.designpattern.creation.factory;
+package com.shivpatel.designpattern.Creational.factory;
 
 public interface DatabaseConnection {
     void connect();

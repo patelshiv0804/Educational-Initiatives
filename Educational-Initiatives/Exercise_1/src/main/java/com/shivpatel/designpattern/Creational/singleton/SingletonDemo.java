@@ -1,4 +1,4 @@
-package com.shivpatel.designpattern.creation.singleton;
+package com.shivpatel.designpattern.Creational.singleton;
 
 import com.shivpatel.designpattern.util.LoggerUtil;
 
