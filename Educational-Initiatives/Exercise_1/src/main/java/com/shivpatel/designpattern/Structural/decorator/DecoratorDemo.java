@@ -2,6 +2,10 @@ package com.shivpatel.designpattern.Structural.decorator;
 
 public class DecoratorDemo {
     public static void main(String[] args) {
+        run(); // call run for standalone execution
+    }
+
+    public static void run() {
         FoodItem order = new Pizza();
         System.out.println(order.getDescription() + " => Rs." + order.getCost());
 
@@ -11,10 +15,5 @@ public class DecoratorDemo {
 
         System.out.println("Final Order: " + order.getDescription());
         System.out.println("Total Cost: Rs." + order.getCost());
-    }
-
-    public static void run() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'run'");
     }
 }

@@ -5,6 +5,10 @@ import java.util.List;
 
 public class AdapterDemo {
     public static void main(String[] args) {
+        run(); // call run for standalone execution
+    }
+
+    public static void run() {
         List<SmartDevice> devices = new ArrayList<>();
         devices.add(new SmartBulb());
         devices.add(new SmartThermostat());
@@ -17,10 +21,5 @@ public class AdapterDemo {
             d.turnOff();
             System.out.println();
         }
-    }
-
-    public static void run() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'run'");
     }
 }
