@@ -1,4 +1,3 @@
-// package exercise2.smarthome.logger;
 package com.shivpatel.smarthome.logger ;
 
 import java.time.LocalDateTime;
