@@ -88,7 +88,7 @@ public class Hub {
                 DeviceProxy dpT = devices.get(idT);
                 if (dpT == null)
                     throw new DeviceNotFoundException("Device not found: " + idT);
-                Device real = dpT.getReal(); 
+                Device real = dpT.getReal();
                 if (real instanceof Thermostat) {
                     ((Thermostat) real).setTemperature(val);
                     AppLogger.INSTANCE.info("Set temp " + val + " on Thermostat(" + idT + ")");
@@ -106,9 +106,62 @@ public class Hub {
             throw new IllegalArgumentException("Insufficient arguments");
     }
 
-    public void addSchedule(ScheduledTask t) {
-        scheduledTasks.add(t);
-        log.info("Schedule added: " + t);
+    // public void addSchedule(ScheduledTask t) {
+    // scheduledTasks.add(t);
+    // log.info("Schedule added: " + t);
+    // }
+    public void addSchedule(ScheduledTask task) throws DeviceNotFoundException {
+        int deviceId = task.getDeviceId();
+        if (!devices.containsKey(deviceId)) {
+            log.warn("Attempt to schedule for non-existing device: " + deviceId);
+            throw new DeviceNotFoundException("Device not found: " + deviceId);
+        }
+
+        for (ScheduledTask s : scheduledTasks) {
+            if (s.getDeviceId() == deviceId && s.getTime().equals(task.getTime())) {
+                log.warn("Duplicate schedule for device " + deviceId + " at " + task.getTime());
+                throw new IllegalArgumentException(
+                        "Schedule already exists for device " + deviceId + " at " + task.getTime());
+            }
+        }
+
+        String cmd = task.getCommand().trim();
+        if (cmd.isEmpty()) {
+            log.warn("Attempt to add empty schedule command for device: " + deviceId);
+            throw new IllegalArgumentException("Empty command");
+        }
+
+        String[] parts = cmd.split("\\s+");
+        String verb = parts[0];
+
+        try {
+            switch (verb) {
+                case "turnOn":
+                case "turnOff":
+                    if (parts.length != 2)
+                        throw new IllegalArgumentException("Usage: " + verb + " <id>");
+                    int targetId = Integer.parseInt(parts[1]);
+                    if (!devices.containsKey(targetId))
+                        throw new DeviceNotFoundException("Target device not found: " + targetId);
+                    break;
+                case "setTemp":
+                    if (parts.length != 3)
+                        throw new IllegalArgumentException("Usage: setTemp <id> <value>");
+                    int tId = Integer.parseInt(parts[1]);
+                    if (!devices.containsKey(tId))
+                        throw new DeviceNotFoundException("Target device not found: " + tId);
+                    Double.parseDouble(parts[2]); // validate numeric value
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown command: " + verb);
+            }
+        } catch (NumberFormatException nfe) {
+            throw new IllegalArgumentException("Invalid numeric value in command: " + cmd);
+        }
+
+        scheduledTasks.add(task);
+        log.info("Schedule added: {device:" + deviceId + ", time:" + task.getTime() + ", cmd:\"" + task.getCommand()
+                + "\"}");
     }
 
     public List<ScheduledTask> getSchedules() {
@@ -132,7 +185,91 @@ public class Hub {
         }
     }
 
-    public void addTrigger(Trigger tr) {
+    public void addTrigger(Trigger tr) throws DeviceNotFoundException {
+
+        
+        String param = tr.getParameterName();
+        String op = tr.getOperator();
+        double threshold = tr.getThreshold();
+        String action = tr.getAction().trim();
+        
+        // 1) validate known parameters (only temperature supported)
+        Set<String> validParams = Set.of("temperature");
+        if (!validParams.contains(param)) {
+            log.warn("Invalid param -> " + param);
+            throw new IllegalArgumentException("Invalid param: " + param);
+        }
+        
+        // 2) validate operator
+        Set<String> validOps = Set.of(">", "<", ">=", "<=", "==");
+        if (!validOps.contains(op)) {
+            log.warn("Invalid operator -> " + op);
+            throw new IllegalArgumentException("Invalid operator: " + op);
+        }
+        
+        // 3) validate action syntax and target device
+        if (action.isEmpty()) {
+            throw new IllegalArgumentException("Missing action for trigger");
+        }
+        String[] parts = action.split("\\s+");
+        String verb = parts[0];
+        int targetId;
+        try {
+            switch (verb) {
+                case "turnOn":
+                case "turnOff":
+                if (parts.length != 2)
+                throw new IllegalArgumentException("Usage: " + verb + " <id>");
+                targetId = Integer.parseInt(parts[1]);
+                if (!devices.containsKey(targetId))
+                throw new DeviceNotFoundException("Target device not found: " + targetId);
+                break;
+                case "setTemp":
+                if (parts.length != 3)
+                throw new IllegalArgumentException("Usage: setTemp <id> <value>");
+                targetId = Integer.parseInt(parts[1]);
+                if (!devices.containsKey(targetId))
+                throw new DeviceNotFoundException("Target device not found: " + targetId);
+                Double.parseDouble(parts[2]); // validate numeric threshold/value
+                break;
+                default:
+                throw new IllegalArgumentException("Wrong action -> " + verb);
+            }
+        } catch (NumberFormatException nfe) {
+            throw new IllegalArgumentException("Threshold or id not a number in action: " + action);
+        }
+        
+        // 4) detect conflicting triggers (same param, op, threshold, same targetId,
+        // opposite action)
+        for (Trigger existing : triggers) {
+            if (existing.getParameterName().equals(param)
+            && existing.getOperator().equals(op)
+                    && Double.compare(existing.getThreshold(), threshold) == 0) {
+
+                        // parse existing action verb & target
+                String[] exParts = existing.getAction().trim().split("\\s+");
+                if (exParts.length >= 2) {
+                    String exVerb = exParts[0];
+                    int exTarget;
+                    try {
+                        exTarget = Integer.parseInt(exParts[1]);
+                    } catch (NumberFormatException e) {
+                        continue;
+                    }
+                    
+                    // conflict if same device and opposing on/off actions
+                    if (exTarget == Integer.parseInt(parts[1])) {
+                        if ((exVerb.equals("turnOn") && verb.equals("turnOff")) ||
+                                (exVerb.equals("turnOff") && verb.equals("turnOn"))) {
+                                    log.warn("Conflicting triggers for device " + exTarget + " at " + threshold);
+                            throw new IllegalArgumentException(
+                                "Conflicting trigger exists for device " + exTarget + " at " + threshold);
+                            }
+                        }
+                    }
+            }
+        }
+
         triggers.add(tr);
         log.info("Trigger added: " + tr);
     }

@@ -1,6 +1,5 @@
-package com.shivpatel.smarthome ;
+package com.shivpatel.smarthome;
 // package com.shivpatel.designpattern.Behavioral.observer;
-
 
 import com.shivpatel.smarthome.device.*;
 import com.shivpatel.smarthome.device.exceptions.DeviceNotFoundException;
@@ -8,6 +7,7 @@ import com.shivpatel.smarthome.hub.*;
 import com.shivpatel.smarthome.logger.AppLogger;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class SmartHomeMain {
@@ -70,28 +70,53 @@ public class SmartHomeMain {
                 hub.executeCommand(cmdLine);
                 break;
             case "setschedule":
-                if (parts.length < 4) {
-                    log.warn("Usage: setSchedule <deviceId> <HH:mm> <command>");
-                    return;
+
+                try {
+                    int devId = Integer.parseInt(parts[1]);
+                    LocalTime t = LocalTime.parse(parts[2]);
+                    String command = String.join(" ", Arrays.copyOfRange(parts, 3, parts.length));
+                    hub.addSchedule(new ScheduledTask(devId, t, command));
+                    System.out.println("Schedule added: {device:" + devId + ", time:" + t + ", cmd:\"" + cmd + "\"}");
+                } catch (DeviceNotFoundException e) {
+                    System.out.println("[ERROR] " + e.getMessage());
+                } catch (IllegalArgumentException e) {
+                    System.out.println("[ERROR] " + e.getMessage());
+                } catch (Exception e) {
+                    System.out
+                            .println("[ERROR] Invalid command format. Usage: setSchedule <deviceId> <HH:mm> <command>");
                 }
-                int devId = Integer.parseInt(parts[1]);
-                LocalTime t = LocalTime.parse(parts[2], TIME_FMT);
-                String command = join(parts, 3);
-                hub.addSchedule(new ScheduledTask(devId, t, command));
                 break;
             case "run-schedules":
-                hub.runDueSchedules(LocalTime.now());
+                if (hub.getSchedules() == null || hub.getSchedules().isEmpty()) {
+                    System.out.println("No scheduled tasks available.");
+                } else {
+                    hub.runDueSchedules(LocalTime.now()); // or the existing method name that executes schedules
+                }
                 break;
+
             case "addtrigger":
                 if (parts.length < 5) {
                     log.warn("Usage: addTrigger <param> <op> <threshold> <action>");
                     return;
                 }
-                String param = parts[1];
-                String op = parts[2];
-                double threshold = Double.parseDouble(parts[3]);
-                String action = join(parts, 4);
-                hub.addTrigger(new Trigger(param, op, threshold, action));
+                try {
+                    // existing parsing code produces param, op, threshold, action
+                    String param = parts[1];
+                    String op = parts[2];
+                    double threshold = Double.parseDouble(parts[3]);
+                    String action = String.join(" ", Arrays.copyOfRange(parts, 4, parts.length));
+                    hub.addTrigger(new Trigger(param, op, threshold, action));
+                    System.out.println("Trigger added: {param:" + param + " " + op + " " + threshold + " -> action:\""
+                            + action + "\"}");
+                } catch (NumberFormatException e) {
+                    System.out.println("[ERROR] Threshold not a number.");
+                } catch (DeviceNotFoundException e) {
+                    System.out.println("[ERROR] " + e.getMessage());
+                } catch (IllegalArgumentException e) {
+                    System.out.println("[ERROR] " + e.getMessage());
+                } catch (Exception e) {
+                    System.out.println("[ERROR] Invalid command. Usage: addTrigger <param> <op> <threshold> <action>");
+                }
                 break;
             case "evaluate-triggers":
                 hub.evaluateTriggers();
