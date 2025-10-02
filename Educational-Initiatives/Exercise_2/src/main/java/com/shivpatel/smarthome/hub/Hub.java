@@ -1,4 +1,4 @@
-package com.shivpatel.smarthome.hub ;
+package com.shivpatel.smarthome.hub;
 
 import com.shivpatel.smarthome.device.*;
 import com.shivpatel.smarthome.device.exceptions.DeviceNotFoundException;
@@ -88,12 +88,12 @@ public class Hub {
                 DeviceProxy dpT = devices.get(idT);
                 if (dpT == null)
                     throw new DeviceNotFoundException("Device not found: " + idT);
-                Device real = dpT;
+                Device real = dpT.getReal(); 
                 if (real instanceof Thermostat) {
                     ((Thermostat) real).setTemperature(val);
-                    notifyObservers("Thermostat " + idT + " tempSet " + val);
+                    AppLogger.INSTANCE.info("Set temp " + val + " on Thermostat(" + idT + ")");
                 } else {
-                    log.warn("Device is not a thermostat: id=" + idT);
+                    AppLogger.INSTANCE.warn("Device is not a thermostat: id=" + idT);
                 }
                 break;
             default:

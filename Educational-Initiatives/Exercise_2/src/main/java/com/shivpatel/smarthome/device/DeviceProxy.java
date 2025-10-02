@@ -12,6 +12,10 @@ public class DeviceProxy implements Device {
         this.hub = hub;
     }
 
+    public Device getReal() {
+        return real;
+    }
+
     @Override
     public int getId() {
         return real.getId();
