@@ -119,7 +119,11 @@ public class SmartHomeMain {
                 }
                 break;
             case "evaluate-triggers":
-                hub.evaluateTriggers();
+                if (hub.getTriggers() == null || hub.getTriggers().isEmpty()) {
+                    System.out.println("No triggers configured.");
+                } else {
+                    hub.evaluateTriggers(); // adjust method name if your Hub uses a different name
+                }
                 break;
             default:
                 log.warn("Unknown command: " + cmdLine);
